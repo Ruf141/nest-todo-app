@@ -1,15 +1,10 @@
-import { isAlphaLocales } from './../../node_modules/@types/validator/index.d';
 import { JwtService } from '@nestjs/jwt';
-import { Instance } from './../../node_modules/prisma/prisma-client/runtime/index-browser.d';
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { error } from 'console';
 import { AuthDto } from './dto/auth.dto';
-import { access } from 'fs';
 import { Jwt } from './interfaces/auth.interface';
 
 @Injectable()
@@ -50,6 +45,7 @@ export class AuthService {
     });
     if (!user) throw new ForbiddenException('Email or password incorrect');
     const isValid = await bcrypt.compare(dto.password, user.hashedPassword);
+    if (isValid) throw new ForbiddenException('Email or password incorrect');
     return this.generateJwt(user.id, user.email);
   }
 
