@@ -1,3 +1,4 @@
+import { isAlphaLocales } from './../../node_modules/@types/validator/index.d';
 import { JwtService } from '@nestjs/jwt';
 import { Instance } from './../../node_modules/prisma/prisma-client/runtime/index-browser.d';
 import { ForbiddenException, Injectable } from '@nestjs/common';
@@ -8,6 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { error } from 'console';
 import { AuthDto } from './dto/auth.dto';
+import { access } from 'fs';
+import { Jwt } from './interfaces/auth.interface';
 
 @Injectable()
 export class AuthService {
@@ -39,17 +42,29 @@ export class AuthService {
     }
   }
 
-  async login(dto:AuthDto){}
+  async login(dto: AuthDto): Promise<Jwt> {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email: dto.email,
+      },
+    });
+    if (!user) throw new ForbiddenException('Email or password incorrect');
+    const isValid = await bcrypt.compare(dto.password, user.hashedPassword);
+    return this.generateJwt(user.id, user.email);
+  }
 
-  async generateJwt(userId: number, email: string){
+  async generateJwt(userId: number, email: string): Promise<Jwt> {
     const payload = {
       sub: userId,
       email,
     };
     const secret = this.config.get('JWT_SECRET');
-    const token = await this.jwt.signAsync(payload,{
+    const token = await this.jwt.signAsync(payload, {
       expiresIn: '5m',
       secret: secret,
-    })
+    });
+    return {
+      accessToken: token,
+    };
   }
 }
